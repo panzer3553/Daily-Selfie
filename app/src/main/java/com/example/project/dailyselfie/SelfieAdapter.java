@@ -12,19 +12,31 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by hoang on 24/09/2015.
  */
 class SelfieAdapter extends ArrayAdapter {
+    ArrayList<File> files;
     private static class ViewHolder {
         ImageView picture;
         TextView fileName;
     }
 
-    public SelfieAdapter(Context context, ArrayList<File> pictures) {
-        super(context, R.layout.item_pic, pictures);
+    public SelfieAdapter(Context context, ArrayList<File> files) {
+        super(context, R.layout.item_pic, files);
     }
+
+//    public void updateItems(ArrayList<File> items) {
+//        this.files = items;
+//        notifyDataSetChanged();
+//    }
+//
+//    @Override
+//    public Object getItem(int position) {
+//        return files.get(position);
+//    }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
@@ -45,6 +57,7 @@ class SelfieAdapter extends ArrayAdapter {
         // Populate the data into the template view using the data object
         setPic(viewHolder.picture, file.getAbsolutePath());
         viewHolder.fileName.setText(file.getName());
+
         // Return the completed view to render on screen
         return convertView;
     }

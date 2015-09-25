@@ -27,42 +27,28 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_TAKE_PHOTO = 1;
     public static String ALBUM_NAME = "daily_selfie";
+    public static long TWO_MINUTES_INTERVAL = 2000 * 60;
     ImageView mImageView;
     String mCurrentPhotoPath;
-    ListView listView;
-    ArrayList<File> filesList;
+    ListView listView ;
+    ArrayList<File> filesList = new ArrayList<File>();
+    ;
     File photoFile;
+    SelfieAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mImageView = (ImageView) findViewById(R.id.image);
         listView = (ListView) findViewById(R.id.listView);
-        Intent intent = new Intent(MainActivity.this, DailySelfieBroadcast.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this,
-                DailySelfieBroadcast.REQUEST_CODE, intent, 0);
-        AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
-        am.setRepeating(am.RTC_WAKEUP, System.currentTimeMillis(), 2000 , pendingIntent);
+        setArlarm();
         //Log.d("Image", mCurrentPhotoPath);
         File storageDir = new File(getExternalFilesDir(
                 Environment.DIRECTORY_PICTURES), ALBUM_NAME);
         Log.d("Dir", storageDir.getAbsolutePath());
-        if(isExternalStorageWritable()){
-            Log.d("SD", "error");
-        }
-
+        getPicFromFile();
 //        File f = new File(path);
-        File file[] = storageDir.listFiles();
-        filesList = new ArrayList<File>();
-        SelfieAdapter adapter = new SelfieAdapter(getApplicationContext(), filesList);
-        if(file.length > 0) {
-            Log.d("Files", "Size: " + file.length);
-            for (int i = 0; i < file.length; i++) {
-                Log.d("Files", "FileName:" + file[i].getName());
-            }
-            filesList = new ArrayList<File>();
-            filesList.addAll(Arrays.asList(file));
-            SelfieAdapter adapter = new SelfieAdapter(getApplicationContext(), filesList);
+            adapter = new SelfieAdapter(getApplicationContext(), filesList);
             listView.setAdapter(adapter);
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -72,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             });
-        }
+
     }
 
 
@@ -118,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
         if(resultCode != RESULT_CANCELED){
             if (requestCode == REQUEST_TAKE_PHOTO) {
                 if(data != null){
-
+                    Log.d("result", "ok");
                 }
             }
         }
@@ -163,5 +149,47 @@ public class MainActivity extends AppCompatActivity {
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = "file:" + image.getAbsolutePath();
         return image;
+    }
+
+    private void setArlarm(){
+        Intent intent = new Intent(MainActivity.this, DailySelfieBroadcast.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this,
+                DailySelfieBroadcast.REQUEST_CODE, intent, 0);
+        AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+        am.setRepeating(am.RTC_WAKEUP, System.currentTimeMillis(), TWO_MINUTES_INTERVAL, pendingIntent);
+    }
+
+    public void getPicFromFile() {
+        if (filesList != null) {
+            File storageDir = new File(getExternalFilesDir(
+                    Environment.DIRECTORY_PICTURES), ALBUM_NAME);
+            Log.d("Dir", storageDir.getAbsolutePath());
+            if (isExternalStorageWritable()) {
+                Log.d("SD", "error");
+            }
+            filesList.clear();
+            File file[] = storageDir.listFiles();
+            filesList.addAll(Arrays.asList(file));
+            Log.d("Files size", "Size:" + filesList.size());
+
+        }
+
+    }
+
+    public void updateSelfie(){
+        if(adapter != null &&  photoFile != null){
+            File storageDir = new File(getExternalFilesDir(
+                    Environment.DIRECTORY_PICTURES), ALBUM_NAME);
+            File file[] = storageDir.listFiles();
+           filesList.add(photoFile);
+            adapter.notifyDataSetChanged();
+//            adapter.updateItems(list);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateSelfie();
     }
 }
