@@ -1,5 +1,7 @@
 package com.example.project.dailyselfie;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -24,37 +26,53 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_TAKE_PHOTO = 1;
+    public static String ALBUM_NAME = "daily_selfie";
     ImageView mImageView;
     String mCurrentPhotoPath;
     ListView listView;
+    ArrayList<File> filesList;
+    File photoFile;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mImageView = (ImageView) findViewById(R.id.image);
         listView = (ListView) findViewById(R.id.listView);
+        Intent intent = new Intent(MainActivity.this, DailySelfieBroadcast.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this,
+                DailySelfieBroadcast.REQUEST_CODE, intent, 0);
+        AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+        am.setRepeating(am.RTC_WAKEUP, System.currentTimeMillis(), 2000 , pendingIntent);
         //Log.d("Image", mCurrentPhotoPath);
-        String path = Environment.getExternalStorageDirectory().toString()+"/Pictures";
-        Log.d("Files", "Path: " + path);
-        File f = new File(path);
-        File file[] = f.listFiles();
-        Log.d("Files", "Size: "+ file.length);
-        for (int i=0; i < file.length; i++)
-        {
-            Log.d("Files", "FileName:" + file[i].getName());
+        File storageDir = new File(getExternalFilesDir(
+                Environment.DIRECTORY_PICTURES), ALBUM_NAME);
+        Log.d("Dir", storageDir.getAbsolutePath());
+        if(isExternalStorageWritable()){
+            Log.d("SD", "error");
         }
-        final ArrayList<File> filesList = new ArrayList<File>();
-        filesList.addAll(Arrays.asList(file));
+
+//        File f = new File(path);
+        File file[] = storageDir.listFiles();
+        filesList = new ArrayList<File>();
         SelfieAdapter adapter = new SelfieAdapter(getApplicationContext(), filesList);
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(getApplication(), PictureActivity.class);
-                intent.putExtra("FilePath", filesList.get(position).getAbsolutePath());
-                startActivity(intent);
+        if(file.length > 0) {
+            Log.d("Files", "Size: " + file.length);
+            for (int i = 0; i < file.length; i++) {
+                Log.d("Files", "FileName:" + file[i].getName());
             }
-        });
+            filesList = new ArrayList<File>();
+            filesList.addAll(Arrays.asList(file));
+            SelfieAdapter adapter = new SelfieAdapter(getApplicationContext(), filesList);
+            listView.setAdapter(adapter);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    Intent intent = new Intent(getApplication(), PictureActivity.class);
+                    intent.putExtra("FilePath", filesList.get(position).getAbsolutePath());
+                    startActivity(intent);
+                }
+            });
+        }
     }
 
 
@@ -87,13 +105,20 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode != RESULT_CANCELED){
             if (requestCode == REQUEST_TAKE_PHOTO) {
                 if(data != null){
-                    Bitmap photo = (Bitmap) data.getExtras().get("data");
-                    mImageView.setImageBitmap(photo);
+
                 }
             }
         }
@@ -105,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         // Ensure that there's a camera activity to handle the intent
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             // Create the File where the photo should go
-            File photoFile = null;
+            photoFile = null;
             try {
                 photoFile = createImageFile();
             } catch (IOException ex) {
@@ -124,8 +149,11 @@ public class MainActivity extends AppCompatActivity {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
+        File storageDir = new File(getExternalFilesDir(
+                Environment.DIRECTORY_PICTURES), ALBUM_NAME);
+        if (!storageDir.mkdirs()) {
+            Log.e("file", "Directory not created");
+        }
         File image = File.createTempFile(
                 imageFileName,  /* prefix */
                 ".jpg",         /* suffix */

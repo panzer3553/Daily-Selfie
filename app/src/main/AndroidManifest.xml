@@ -28,6 +28,7 @@
             android:name=".PictureActivity"
             android:label="@string/title_activity_picture" >
         </activity>
+        <receiver android:name="com.example.project.dailyselfie.DailySelfieBroadcast"></receiver>
     </application>
 
 </manifest>
